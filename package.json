@@ -1,0 +1,15 @@
+{
+  "name": "cinenova-wa-movie-bot",
+  "version": "1.0.0",
+  "description": "Cinenova WhatsApp Movie Bot created by Imalsha Nethsara",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.5",
+    "axios": "^1.7.9",
+    "express": "^4.21.2",
+    "pino": "^9.6.0"
+  }
+}
