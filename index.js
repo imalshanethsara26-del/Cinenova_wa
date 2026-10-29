@@ -104,7 +104,7 @@ const downloadFileFast = async (u, d) => {
 
     return new Promise((res, rej) => {
         let f = r.includes('pixeldrain.com/') && !r.includes('/api/file/') ? r.replace('pixeldrain.com/u/', 'pixeldrain.com/api/file/') : r;
-        console.log("🚀 [ARIA2 DOWNLOAD STARTED] Threads: 16\n");
+        console.log("🚀 [ARIA2 FAST DOWNLOAD STARTED] Max Connections: 16\n");
 
         const dir = path.dirname(d);
         const file = path.basename(d);
@@ -113,10 +113,12 @@ const downloadFileFast = async (u, d) => {
             '-x', '16',
             '-s', '16',
             '-j', '16',
-            '--min-split-size=1M',
+            '--max-connection-per-server=16',
+            '--split=16',
+            '--min-split-size=512K',
             '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
             '--check-certificate=false',
-            '--summary-interval=2',
+            '--summary-interval=1',
             '-d', dir,
             '-o', file,
             f
@@ -344,7 +346,7 @@ app.listen(PORT, async () => {
     });
 
     ngrokProcess.stderr.on('data', (data) => {
-        process.stdout.write(data);
+        process.stderr.write(data);
     });
 
     console.log(`\n========================================`);
