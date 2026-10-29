@@ -13,6 +13,10 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
+// ================= NGROK CONFIGURATION =================
+const NGROK_AUTHTOKEN = "3LMaagLM4y8yOhx1qDhQqfHE8Bf_3RdGFVR9J4aBS76sAFJWb";
+const NGROK_DOMAIN = "shrouded-curvature-scrubber.ngrok-free.dev";
+
 // Auto-install aria2 package if missing
 try {
     execSync('which aria2c || (apt-get update && apt-get install -y aria2)', { stdio: 'ignore' });
@@ -326,45 +330,27 @@ async function startBot(isFreshStart = false) {
     }
 }
 
-// Start Express Server & Pinggy Tunnel
+// Start Express Server & Ngrok Static Tunnel
 app.listen(PORT, async () => {
     console.log(`🚀 Bot Webhook Server is running on port ${PORT}`);
-    console.log(`🌐 [PINGGY]: Starting Pinggy Tunnel...`);
+    console.log(`🌐 [NGROK]: Configuring Authtoken & Starting Static Tunnel...`);
 
-    // Pinggy නිරුපද්‍රිතව සහ වෝනින් පේජ් නැතුව ඩ්රෙක්ට් ලින්ක් එක ලබා දීමට ssh හෝ curl හරහා රන් කිරීම
-    const pinggy = exec(`ssh -o StrictHostKeyChecking=no -R 80:localhost:${PORT} a.pinggy.io`);
+    const setupCmd = `npx ngrok config add-authtoken ${NGROK_AUTHTOKEN} && npx ngrok http ${PORT} --url=${NGROK_DOMAIN}`;
+    
+    const ngrokProcess = exec(setupCmd);
 
-    pinggy.stdout.on('data', (data) => {
-        const output = data.toString();
-        process.stdout.write(output);
-        if (output.includes('https://') && output.includes('pinggy.link')) {
-            const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.pinggy\.link/);
-            if (match) {
-                console.log(`\n========================================`);
-                console.log(`🌐 [PINGGY TUNNEL URL READY]:`);
-                console.log(`url: ${match[0]}`);
-                console.log(`========================================\n`);
-            }
-        }
+    ngrokProcess.stdout.on('data', (data) => {
+        process.stdout.write(data);
     });
 
-    pinggy.stderr.on('data', (data) => {
-        const output = data.toString();
-        // Pinggy ලින්ක් එක සමහර විට stderr එක හරහාද එනු ලැබේ
-        if (output.includes('https://') && output.includes('pinggy.link')) {
-            const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.pinggy\.link/);
-            if (match) {
-                console.log(`\n========================================`);
-                console.log(`🌐 [PINGGY TUNNEL URL READY]:`);
-                console.log(`url: ${match[0]}`);
-                console.log(`========================================\n`);
-            }
-        }
+    ngrokProcess.stderr.on('data', (data) => {
+        process.stdout.write(data);
     });
 
-    pinggy.on('close', (code) => {
-        console.log(`⚠️ Pinggy Tunnel process exited with code ${code}`);
-    });
+    console.log(`\n========================================`);
+    console.log(`🌐 [PERMANENT NGROK WEBHOOK URL READY]:`);
+    console.log(`url: https://${NGROK_DOMAIN}/api/bot/send-movie`);
+    console.log(`========================================\n`);
 });
 
 setInterval(() => {}, 3600000);
