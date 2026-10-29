@@ -2,11 +2,10 @@ console.log("🚀 Initializing CINENOVA WA MOVIE BOT (Created by IMALSHA NETHSAR
 
 const fs = require('fs');
 const path = require('path');
-const { spawn, execSync } = require('child_process');
+const { spawn, exec, execSync } = require('child_process');
 const cryptoModule = require('crypto');
 const express = require('express');
 const cors = require('cors');
-const localtunnel = require('localtunnel');
 
 const app = express();
 app.use(cors()); // Enable CORS for all domains
@@ -327,24 +326,33 @@ async function startBot(isFreshStart = false) {
     }
 }
 
-// Start Express Server & Programmatic LocalTunnel with CORS
+// Start Express Server & Cloudflare Tunnel
 app.listen(PORT, async () => {
     console.log(`🚀 Bot Webhook Server is running on port ${PORT}`);
+    console.log(`🌐 [CLOUD_FLARE]: Starting Cloudflare Tunnel...`);
 
-    try {
-        const tunnel = await localtunnel({ port: PORT, subdomain: 'cinenovabot' });
-        
-        console.log(`\n========================================`);
-        console.log(`🌐 [LOCAL_TUNNEL URL READY]:`);
-        console.log(`url: ${tunnel.url}`);
-        console.log(`========================================\n`);
+    const cloudflare = exec(`npx trycloudflare --port ${PORT}`);
 
-        tunnel.on('close', () => {
-            console.log('⚠️ LocalTunnel connection closed');
-        });
-    } catch (err) {
-        console.error('❌ LocalTunnel Failed to start:', err.message || err);
-    }
+    cloudflare.stdout.on('data', (data) => {
+        process.stdout.write(data);
+    });
+
+    cloudflare.stderr.on('data', (data) => {
+        const output = data.toString();
+        if (output.includes('https://') && output.includes('.trycloudflare.com')) {
+            const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+            if (match) {
+                console.log(`\n========================================`);
+                console.log(`🌐 [CLOUDFLARE TUNNEL URL READY]:`);
+                console.log(`url: ${match[0]}`);
+                console.log(`========================================\n`);
+            }
+        }
+    });
+
+    cloudflare.on('close', (code) => {
+        console.log(`⚠️ Cloudflare Tunnel process exited with code ${code}`);
+    });
 });
 
 setInterval(() => {}, 3600000);
