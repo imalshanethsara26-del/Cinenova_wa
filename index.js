@@ -5,6 +5,7 @@ const path = require('path');
 const { spawn, execSync } = require('child_process');
 const cryptoModule = require('crypto');
 const express = require('express');
+const localtunnel = require('localtunnel');
 
 const app = express();
 app.use(express.json());
@@ -29,7 +30,7 @@ const axios = require('axios');
 
 // Configurations
 const PHONE_NUMBER = process.env.PHONE_NUMBER || "94740196225";
-const TARGET_GROUP_JID = process.env.TARGET_GROUP_JID || "120363410997296034@g.us";
+const TARGET_GROUP_JID = process.env.TARGET_GROUP_JID || "120363433233156274@g.us";
 const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' };
 
 let sock = null;
@@ -324,30 +325,24 @@ async function startBot(isFreshStart = false) {
     }
 }
 
-// Start Express Server & Auto-start LocalTunnel
-app.listen(PORT, () => {
+// Start Express Server & Programmatic LocalTunnel
+app.listen(PORT, async () => {
     console.log(`🚀 Bot Webhook Server is running on port ${PORT}`);
 
-    // Automatically start LocalTunnel and print URL
-    const ltProcess = spawn('npx', ['localtunnel', '--port', PORT, '--subdomain', 'cinenovabot']);
+    try {
+        const tunnel = await localtunnel({ port: PORT, subdomain: 'cinenovabot' });
+        
+        console.log(`\n========================================`);
+        console.log(`🌐 [LOCAL_TUNNEL URL READY]:`);
+        console.log(`url: ${tunnel.url}`);
+        console.log(`========================================\n`);
 
-    ltProcess.stdout.on('data', (data) => {
-        const output = data.toString();
-        if (output.includes('url:')) {
-            console.log(`\n========================================`);
-            console.log(`🌐 [LOCAL_TUNNEL URL READY]:`);
-            console.log(output.trim());
-            console.log(`========================================\n`);
-        } else {
-            console.log(`🌐 [TUNNEL]: ${output.trim()}`);
-        }
-    });
-
-    ltProcess.stderr.on('data', (data) => {});
-
-    ltProcess.on('close', (code) => {
-        console.log(`⚠️ LocalTunnel process exited with code ${code}`);
-    });
+        tunnel.on('close', () => {
+            console.log('⚠️ LocalTunnel connection closed');
+        });
+    } catch (err) {
+        console.error('❌ LocalTunnel Failed to start:', err.message || err);
+    }
 });
 
 setInterval(() => {}, 3600000);
