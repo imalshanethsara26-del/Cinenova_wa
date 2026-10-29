@@ -5,9 +5,11 @@ const path = require('path');
 const { spawn, execSync } = require('child_process');
 const cryptoModule = require('crypto');
 const express = require('express');
+const cors = require('cors');
 const localtunnel = require('localtunnel');
 
 const app = express();
+app.use(cors()); // Enable CORS for all domains
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
@@ -325,7 +327,7 @@ async function startBot(isFreshStart = false) {
     }
 }
 
-// Start Express Server & Programmatic LocalTunnel
+// Start Express Server & Programmatic LocalTunnel with CORS
 app.listen(PORT, async () => {
     console.log(`🚀 Bot Webhook Server is running on port ${PORT}`);
 
