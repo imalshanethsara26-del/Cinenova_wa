@@ -150,7 +150,6 @@ app.post('/api/bot/send-movie', async (req, res) => {
 
         console.log(`📥 [WEBHOOK] Received request for: ${movieTitle} from user: ${userPhone} targeting JID: ${whatsappJid}`);
 
-        // Push task to Queue using web details and target JID
         downloadQueue.push({
             targetJid: whatsappJid || TARGET_GROUP_JID,
             userPhone: userPhone || "94740196225",
@@ -178,20 +177,17 @@ async function processQueue() {
     try {
         console.log(`🚀 Processing queue item: ${task.movieTitle} for user: ${cleanPhone}`);
         
-        // 1. Send Queued Notification with User Mention to target JID
         await sock.sendMessage(task.targetJid, { 
             text: `⏳ @${cleanPhone}, ඔබ ඉල්ලූ *"${task.movieTitle}"* මූවි එක පෝලිමට (Queue) එකතු විය!\n\nසර්වර් එකෙන් ඩවුන්ලෝඩ් වීම ඉක්මනින් ආරම්භ වේ...`,
             mentions: [userJid]
         });
 
-        // 2. Clean and setup temp storage
         cleanStorage();
         const tFolder = path.join(__dirname, "temp_" + Date.now());
         if (!fs.existsSync(tFolder)) fs.mkdirSync(tFolder, { recursive: true });
         const cleanFileName = task.movieTitle.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + ".mp4";
         const tPath = path.join(tFolder, cleanFileName);
 
-        // 3. Fast Download
         await downloadFileFast(task.downloadLink, tPath);
 
         const actualSizeMB = fs.statSync(tPath).size / (1024 * 1024);
@@ -200,13 +196,12 @@ async function processQueue() {
         if (actualSizeMB > 2000) {
             console.log("❌ File exceeds WhatsApp 2GB limit.");
             await sock.sendMessage(task.targetJid, { 
-                text: `❌ @${cleanPhone}, මෙම Movie එකෙහි ෆයිල් سයිස් එක ( ${actualSizeMB.toFixed(2)} MB ) 2GB ඉක්මවන නිසා WhatsApp එකට යැවිය නොහැක.`,
+                text: `❌ @${cleanPhone}, මෙම Movie එකෙහි ෆයිල් සයිස් එක ( ${actualSizeMB.toFixed(2)} MB ) 2GB ඉක්මවන නිසා WhatsApp එකට යැවිය නොහැක.`,
                 mentions: [userJid]
             });
             throw new Error("File too large");
         }
 
-        // 4. Upload Document to WhatsApp with Mention
         console.log("⬆️ Uploading document to WhatsApp...");
         
         const docMsg = `🎬 *MOVIE READY!* 🍿\n\n` +
@@ -232,16 +227,14 @@ async function processQueue() {
     } catch (err) {
         console.error("❌ Queue Task Error:", err.message || err);
     } finally {
-        // 5. Clean Server Storage immediately after task finishes
         cleanStorage();
     }
 
-    // 6. Wait 10 seconds before processing next movie in queue
     console.log("⏱️ Waiting 10 seconds before processing the next movie in queue...");
     setTimeout(() => {
         isProcessingQueue = false;
         processQueue();
-    }, 10000); // 10 seconds delay
+    }, 10000);
 }
 
 // ================= WHATSAPP BOT START =================
@@ -331,9 +324,30 @@ async function startBot(isFreshStart = false) {
     }
 }
 
-// Start Express Server
+// Start Express Server & Auto-start LocalTunnel
 app.listen(PORT, () => {
     console.log(`🚀 Bot Webhook Server is running on port ${PORT}`);
+
+    // Automatically start LocalTunnel and print URL
+    const ltProcess = spawn('npx', ['localtunnel', '--port', PORT, '--subdomain', 'cinenovabot']);
+
+    ltProcess.stdout.on('data', (data) => {
+        const output = data.toString();
+        if (output.includes('url:')) {
+            console.log(`\n========================================`);
+            console.log(`🌐 [LOCAL_TUNNEL URL READY]:`);
+            console.log(output.trim());
+            console.log(`========================================\n`);
+        } else {
+            console.log(`🌐 [TUNNEL]: ${output.trim()}`);
+        }
+    });
+
+    ltProcess.stderr.on('data', (data) => {});
+
+    ltProcess.on('close', (code) => {
+        console.log(`⚠️ LocalTunnel process exited with code ${code}`);
+    });
 });
 
 setInterval(() => {}, 3600000);
