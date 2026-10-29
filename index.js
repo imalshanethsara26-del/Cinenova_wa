@@ -2,14 +2,13 @@ console.log("🚀 Initializing CINENOVA WA MOVIE BOT (Created by IMALSHA NETHSAR
 
 const fs = require('fs');
 const path = require('path');
-const { spawn, execSync } = require('child_process');
+const { spawn, exec, execSync } = require('child_process');
 const cryptoModule = require('crypto');
 const express = require('express');
 const cors = require('cors');
-const localtunnel = require('localtunnel');
 
 const app = express();
-app.use(cors());
+app.use(cors()); // Enable CORS for all domains
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
@@ -327,24 +326,45 @@ async function startBot(isFreshStart = false) {
     }
 }
 
-// Start Express Server & Programmatic LocalTunnel (All in One Cell)
+// Start Express Server & Pinggy Tunnel
 app.listen(PORT, async () => {
     console.log(`🚀 Bot Webhook Server is running on port ${PORT}`);
+    console.log(`🌐 [PINGGY]: Starting Pinggy Tunnel...`);
 
-    try {
-        const tunnel = await localtunnel({ port: PORT, subdomain: 'cinenovabot' });
-        
-        console.log(`\n========================================`);
-        console.log(`🌐 [LOCAL_TUNNEL URL READY]:`);
-        console.log(`url: ${tunnel.url}`);
-        console.log(`========================================\n`);
+    // Pinggy නිරුපද්‍රිතව සහ වෝනින් පේජ් නැතුව ඩ්රෙක්ට් ලින්ක් එක ලබා දීමට ssh හෝ curl හරහා රන් කිරීම
+    const pinggy = exec(`ssh -o StrictHostKeyChecking=no -R 80:localhost:${PORT} a.pinggy.io`);
 
-        tunnel.on('close', () => {
-            console.log('⚠️ LocalTunnel connection closed');
-        });
-    } catch (err) {
-        console.error('❌ LocalTunnel Failed to start:', err.message || err);
-    }
+    pinggy.stdout.on('data', (data) => {
+        const output = data.toString();
+        process.stdout.write(output);
+        if (output.includes('https://') && output.includes('pinggy.link')) {
+            const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.pinggy\.link/);
+            if (match) {
+                console.log(`\n========================================`);
+                console.log(`🌐 [PINGGY TUNNEL URL READY]:`);
+                console.log(`url: ${match[0]}`);
+                console.log(`========================================\n`);
+            }
+        }
+    });
+
+    pinggy.stderr.on('data', (data) => {
+        const output = data.toString();
+        // Pinggy ලින්ක් එක සමහර විට stderr එක හරහාද එනු ලැබේ
+        if (output.includes('https://') && output.includes('pinggy.link')) {
+            const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.pinggy\.link/);
+            if (match) {
+                console.log(`\n========================================`);
+                console.log(`🌐 [PINGGY TUNNEL URL READY]:`);
+                console.log(`url: ${match[0]}`);
+                console.log(`========================================\n`);
+            }
+        }
+    });
+
+    pinggy.on('close', (code) => {
+        console.log(`⚠️ Pinggy Tunnel process exited with code ${code}`);
+    });
 });
 
 setInterval(() => {}, 3600000);
