@@ -79,33 +79,11 @@ const clearSessionFolder = () => {
     } catch (e) {}
 };
 
-const resolveRealLink = async (u, d = 0) => {
-    if (d > 5 || !u) return u;
-    try {
-        if (u.includes('pixeldrain.com/api/file/')) return u;
-        if (u.includes('pixeldrain.com/u/')) return u.replace('pixeldrain.com/u/', 'pixeldrain.com/api/file/');
-
-        const r = await axios.get(u, { headers: HEADERS, timeout: 20000, maxRedirects: 10 });
-        const h = typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
-        const m = h.match(/https?:\/\/[^\s"'<>]+\.(?:mp4|mkv|avi)[^\s"'>]*/i);
-        if (m) return m[0];
-
-        const p = h.match(/https?:\/\/pixeldrain\.com\/(?:u|api\/file)\/[a-zA-Z0-9_-]+/i);
-        return p ? (p[0].includes('/u/') ? p[0].replace('/u/', '/api/file/') : p[0]) : u;
-    } catch (e) {
-        return u;
-    }
-};
-
+// ⚡ Direct Download Function (No Extra Resolving, Instant Speed)
 const downloadFileFast = async (u, d) => {
-    console.log("\n📥 [RESOLVING DIRECT LINK] Target URL:", u);
-    const r = await resolveRealLink(u);
-    console.log("🔗 [FINAL DOWNLOAD LINK]:", r);
+    console.log("\n🚀 [DIRECT DOWNLOAD STARTED] Target URL:", u);
 
     return new Promise((res, rej) => {
-        let f = r.includes('pixeldrain.com/') && !r.includes('/api/file/') ? r.replace('pixeldrain.com/u/', 'pixeldrain.com/api/file/') : r;
-        console.log("🚀 [ARIA2 FAST DOWNLOAD STARTED] Max Connections: 16\n");
-
         const dir = path.dirname(d);
         const file = path.basename(d);
 
@@ -115,13 +93,13 @@ const downloadFileFast = async (u, d) => {
             '-j', '16',
             '--max-connection-per-server=16',
             '--split=16',
-            '--min-split-size=512K',
+            '--min-split-size=1M', // Fixed to 1M to prevent aria2c error 28
             '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
             '--check-certificate=false',
             '--summary-interval=1',
             '-d', dir,
             '-o', file,
-            f
+            u
         ];
 
         const child = spawn('aria2c', args);
