@@ -36,7 +36,14 @@ const axios = require('axios');
 // Configurations
 const PHONE_NUMBER = process.env.PHONE_NUMBER || "94740196225";
 const TARGET_GROUP_JID = process.env.TARGET_GROUP_JID || "120363433233156274@g.us";
-const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' };
+
+// Array of User-Agents to rotate and bypass simple IP/UA restrictions
+const USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
+    'Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0'
+];
 
 let sock = null;
 let pairingRequested = false;
@@ -79,13 +86,16 @@ const clearSessionFolder = () => {
     } catch (e) {}
 };
 
-// ⚡ Direct Download Function (No Extra Resolving, Instant Speed)
+// ⚡ Anti-Limit Fast Download Function with Random User-Agent Rotation
 const downloadFileFast = async (u, d) => {
-    console.log("\n🚀 [DIRECT DOWNLOAD STARTED] Target URL:", u);
+    console.log("\n🚀 [ANTI-LIMIT DOWNLOAD STARTED] Target URL:", u);
 
     return new Promise((res, rej) => {
         const dir = path.dirname(d);
         const file = path.basename(d);
+
+        // Pick a random user agent to prevent tracking/throttling
+        const randomUA = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 
         const args = [
             '-x', '16',
@@ -93,8 +103,9 @@ const downloadFileFast = async (u, d) => {
             '-j', '16',
             '--max-connection-per-server=16',
             '--split=16',
-            '--min-split-size=1M', // Fixed to 1M to prevent aria2c error 28
-            '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            '--min-split-size=1M',
+            `--user-agent=${randomUA}`,
+            '--header=Referer: https://pixeldrain.com/',
             '--check-certificate=false',
             '--summary-interval=1',
             '-d', dir,
@@ -324,7 +335,7 @@ app.listen(PORT, async () => {
     });
 
     ngrokProcess.stderr.on('data', (data) => {
-        process.stderr.write(data);
+        process.stdout.write(data);
     });
 
     console.log(`\n========================================`);
