@@ -13,6 +13,11 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
+// ================= ROOT ROUTE FOR UPTIMEROBOT =================
+app.get('/', (req, res) => {
+    res.send('Bot is Alive and Running!');
+});
+
 // ================= NGROK CONFIGURATION =================
 const NGROK_AUTHTOKEN = "3LMaagLM4y8yOhx1qDhQqfHE8Bf_3RdGFVR9J4aBS76sAFJWb";
 const NGROK_DOMAIN = "shrouded-curvature-scrubber.ngrok-free.dev";
