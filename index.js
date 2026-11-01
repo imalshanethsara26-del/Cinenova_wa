@@ -38,7 +38,8 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = requi
 const pino = require('pino');
 const axios = require('axios');
 
-// Configurations - Default JID set to target group
+// Configurations - Default JID set to target group and your phone number for pairing
+const PHONE_NUMBER = process.env.PHONE_NUMBER || "94740196225";
 const TARGET_GROUP_JID = process.env.TARGET_GROUP_JID || "120363412473526442@g.us";
 
 // Array of User-Agents to rotate and bypass simple IP/UA restrictions
@@ -168,7 +169,6 @@ async function processQueue() {
     try {
         console.log(`🚀 Processing queue item: ${task.movieTitle} (${task.selectedQuality})`);
         
-        // Notify group/chat that download is starting
         const startMsg = hasPhone 
             ? `⏳ @${task.userPhone}, ඔබ ඉල්ලූ *"${task.movieTitle}"* (${task.selectedQuality}) වීඩියෝ එක පෝලිමට (Queue) එකතු විය!\n\nසර්වර් එකෙන් ඩවුන්ලෝඩ් වීම ඉක්මනින් ආරම්භ වේ... 🔥`
             : `⏳ ඔබ ඉල්ලූ *"${task.movieTitle}"* (${task.selectedQuality}) වීඩියෝ එක පෝලිමට (Queue) එකතු විය!\n\nසර්වර් එකෙන් ඩවුන්ලෝඩ් වීම ඉක්මනින් ආරම්භ වේ... 🔥`;
@@ -237,7 +237,7 @@ async function processQueue() {
     }, 10000);
 }
 
-// ================= WHATSAPP BOT START =================
+// ================= WHATSAPP BOT START (PAIRING CODE VERSION) =================
 async function startBot() {
     cleanStorage();
 
@@ -247,27 +247,34 @@ async function startBot() {
             fs.mkdirSync(sessionFolder, { recursive: true });
         }
 
-        const rootCreds = path.join(__dirname, 'creds.json');
-        const sessionCreds = path.join(sessionFolder, 'creds.json');
-        if (fs.existsSync(rootCreds) && !fs.existsSync(sessionCreds)) {
-            fs.copyFileSync(rootCreds, sessionCreds);
-            console.log("📁 Successfully copied root creds.json to ./session/ folder!");
-        }
-
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
 
         sock = makeWASocket({
             logger: pino({ level: 'silent' }),
             printQRInTerminal: false,
             auth: state,
-            browser: ['Ubuntu', 'Chrome', '20.0.0.4'],
-            markOnlineOnConnect: false,
-            mediaUploadTimeoutMs: 1200000,
-            connectTimeoutMs: 1200000,
-            keepAliveIntervalMs: 30000
+            browser: ['Chrome (Linux)', '', '']
         });
 
         sock.ev.on('creds.update', saveCreds);
+
+        // Pairing Code Generation Logic
+        if (!sock.authState.creds.registered) {
+            const phoneNumber = PHONE_NUMBER.replace(/[^0-9]/g, '');
+            console.log(`\n⏳ Requesting Pairing Code for phone number: ${phoneNumber}...\n`);
+            
+            setTimeout(async () => {
+                try {
+                    let code = await sock.requestPairingCode(phoneNumber);
+                    code = code?.match(/.{1,4}/g)?.join("-") || code;
+                    console.log(`\n========================================`);
+                    console.log(`🔗 YOUR WHATSAPP PAIRING CODE: [ ${code} ]`);
+                    console.log(`========================================\n`);
+                } catch (err) {
+                    console.error("❌ Failed to get pairing code:", err);
+                }
+            }, 3000);
+        }
 
         sock.ev.on('connection.update', async u => {
             const { connection: c, lastDisconnect: l } = u;
