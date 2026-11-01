@@ -119,6 +119,7 @@ app.post('/api/bot/send-video', async (req, res) => {
     }
 });
 
+// ================= ANTI-BAN QUEUE PROCESSOR (ENGLISH VERSION) =================
 async function processQueue() {
     if (isProcessingQueue || downloadQueue.length === 0 || !sock) return;
     isProcessingQueue = true;
@@ -129,7 +130,7 @@ async function processQueue() {
 
     try {
         await sock.sendMessage(task.targetJid, { 
-            text: `⏳ ඔබ ඉල්ලූ *"${task.movieTitle}"* (${task.selectedQuality}) වීඩියෝ එක පෝලිමට එකතු විය! ඩවුන්ලෝඩ් වෙමින් පවතී... 🔥`,
+            text: `⏳ Your requested video *"${task.movieTitle}"* (${task.selectedQuality}) has been added to the queue! Downloading now... 🔥`,
             mentions: userJid ? [userJid] : []
         });
 
@@ -143,7 +144,7 @@ async function processQueue() {
 
         const actualSizeMB = fs.statSync(tPath).size / (1024 * 1024);
         if (actualSizeMB > 2000) {
-            await sock.sendMessage(task.targetJid, { text: `❌ ෆයිල් සයිස් එක 2GB ඉක්මවන නිසා යැවිය නොහැක.` });
+            await sock.sendMessage(task.targetJid, { text: `❌ File size exceeds 2GB limit, cannot send.` });
             throw new Error("File too large");
         }
 
@@ -171,13 +172,17 @@ async function processQueue() {
         cleanStorage();
     }
 
+    // Randomized anti-ban delay (15s to 25s)
+    const randomDelay = Math.floor(Math.random() * 10000) + 15000; 
+    console.log(`⏳ [ANTI-BAN] Waiting ${randomDelay / 1000} seconds before processing next video in queue...`);
+
     setTimeout(() => {
         isProcessingQueue = false;
         processQueue();
-    }, 10000);
+    }, randomDelay);
 }
 
-// ================= WHATSAPP BOT START (FIXED PAIRING CODE) =================
+// ================= WHATSAPP BOT START =================
 async function startBot() {
     cleanStorage();
 
@@ -193,7 +198,7 @@ async function startBot() {
             logger: pino({ level: 'silent' }),
             printQRInTerminal: false,
             auth: state,
-            browser: Browsers.macOS('Chrome') // Mac Chrome බ්‍රව්සර් එකක් ලෙස රෙජිස්ටර් වීම
+            browser: Browsers.macOS('Chrome')
         });
 
         sock.ev.on('creds.update', saveCreds);
@@ -220,7 +225,6 @@ async function startBot() {
             }
         });
 
-        // නිවැරදිව කනෙක්ෂන් එක ලෝඩ් වුණාට පසු Pairing Code එක ඉල්ලීම
         if (!sock.authState.creds.registered) {
             setTimeout(async () => {
                 const phoneNumber = PHONE_NUMBER.replace(/[^0-9]/g, '');
@@ -234,7 +238,7 @@ async function startBot() {
                 } catch (err) {
                     console.error("❌ Failed to get pairing code:", err);
                 }
-            }, 6000); // තත්පර 6ක් කල් දී කනෙක්ෂන් එක ස්ටේබල් වෙන්න හැරීම
+            }, 6000);
         }
 
         sock.ev.on('messages.upsert', async d => {
