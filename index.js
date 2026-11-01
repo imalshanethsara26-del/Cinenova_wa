@@ -1,4 +1,4 @@
-console.log("🚀 Initializing CINENOVA WA MOVIE BOT (Created by IMALSHA NETHSARA)...");
+console.log("🚀 Initializing MIDNIGHT VAULT ADULT BOT (Developed by Hidden Man)...");
 
 const fs = require('fs');
 const path = require('path');
@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 
 // ================= ROOT ROUTE FOR UPTIMEROBOT =================
 app.get('/', (req, res) => {
-    res.send('Bot is Alive and Running!');
+    res.send('Midnight Vault Bot is Alive and Running! 🔥');
 });
 
 // ================= NGROK CONFIGURATION =================
@@ -38,9 +38,8 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = requi
 const pino = require('pino');
 const axios = require('axios');
 
-// Configurations
-const PHONE_NUMBER = process.env.PHONE_NUMBER || "94740196225";
-const TARGET_GROUP_JID = process.env.TARGET_GROUP_JID || "120363433233156274@g.us";
+// Configurations - Default JID set to target group
+const TARGET_GROUP_JID = process.env.TARGET_GROUP_JID || "120363412473526442@g.us";
 
 // Array of User-Agents to rotate and bypass simple IP/UA restrictions
 const USER_AGENTS = [
@@ -99,7 +98,7 @@ const downloadFileFast = async (u, d) => {
             '--split=16',
             '--min-split-size=1M',
             `--user-agent=${randomUA}`,
-            '--header=Referer: https://pixeldrain.com/',
+            '--header=Referer: https://www.xnxx.com/',
             '--check-certificate=false',
             '--summary-interval=1',
             '-d', dir,
@@ -130,26 +129,27 @@ const downloadFileFast = async (u, d) => {
     });
 };
 
-// ================= WEBHOOK ENDPOINT FOR CINENOVA FRONTEND =================
-app.post('/api/bot/send-movie', async (req, res) => {
+// ================= WEBHOOK ENDPOINT FOR MIDNIGHT VAULT FRONTEND =================
+app.post('/api/bot/send-video', async (req, res) => {
     try {
-        const { whatsappJid, userPhone, movieTitle, fileSize, downloadLink } = req.body;
+        const { whatsappJid, userPhone, movieTitle, videoDuration, selectedQuality, downloadLink } = req.body;
 
         if (!downloadLink) {
             return res.status(400).json({ status: false, error: "Download link missing" });
         }
 
-        console.log(`📥 [WEBHOOK] Received request for: ${movieTitle} from user: ${userPhone} targeting JID: ${whatsappJid}`);
+        console.log(`📥 [WEBHOOK] Received request for: ${movieTitle} [${selectedQuality}] from user: ${userPhone || 'Anonymous'}`);
 
         downloadQueue.push({
             targetJid: whatsappJid || TARGET_GROUP_JID,
-            userPhone: userPhone || "94740196225",
-            movieTitle: movieTitle || "Selected Movie",
-            fileSize: fileSize || "N/A",
+            userPhone: userPhone ? userPhone.replace(/[^0-9]/g, '') : "Anonymous",
+            movieTitle: movieTitle || "Adult Video",
+            videoDuration: videoDuration || "N/A",
+            selectedQuality: selectedQuality || "HD",
             downloadLink: downloadLink
         });
 
-        res.json({ status: true, message: "Movie added to bot queue successfully with web details!" });
+        res.json({ status: true, message: "Video added to Midnight Vault bot queue successfully!" });
         processQueue();
     } catch (err) {
         res.status(500).json({ status: false, error: err.message });
@@ -162,21 +162,26 @@ async function processQueue() {
     isProcessingQueue = true;
 
     const task = downloadQueue.shift();
-    const cleanPhone = task.userPhone.replace(/[^0-9]/g, '');
-    const userJid = `${cleanPhone}@s.whatsapp.net`;
+    const hasPhone = task.userPhone !== "Anonymous" && task.userPhone.length > 5;
+    const userJid = hasPhone ? `${task.userPhone}@s.whatsapp.net` : null;
 
     try {
-        console.log(`🚀 Processing queue item: ${task.movieTitle} for user: ${cleanPhone}`);
+        console.log(`🚀 Processing queue item: ${task.movieTitle} (${task.selectedQuality})`);
         
+        // Notify group/chat that download is starting
+        const startMsg = hasPhone 
+            ? `⏳ @${task.userPhone}, ඔබ ඉල්ලූ *"${task.movieTitle}"* (${task.selectedQuality}) වීඩියෝ එක පෝලිමට (Queue) එකතු විය!\n\nසර්වර් එකෙන් ඩවුන්ලෝඩ් වීම ඉක්මනින් ආරම්භ වේ... 🔥`
+            : `⏳ ඔබ ඉල්ලූ *"${task.movieTitle}"* (${task.selectedQuality}) වීඩියෝ එක පෝලිමට (Queue) එකතු විය!\n\nසර්වර් එකෙන් ඩවුන්ලෝඩ් වීම ඉක්මනින් ආරම්භ වේ... 🔥`;
+
         await sock.sendMessage(task.targetJid, { 
-            text: `⏳ @${cleanPhone}, ඔබ ඉල්ලූ *"${task.movieTitle}"* මූවි එක පෝලිමට (Queue) එකතු විය!\n\nසර්වර් එකෙන් ඩවුන්ලෝඩ් වීම ඉක්මනින් ආරම්භ වේ...`,
-            mentions: [userJid]
+            text: startMsg,
+            mentions: userJid ? [userJid] : []
         });
 
         cleanStorage();
         const tFolder = path.join(__dirname, "temp_" + Date.now());
         if (!fs.existsSync(tFolder)) fs.mkdirSync(tFolder, { recursive: true });
-        const cleanFileName = task.movieTitle.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + ".mp4";
+        const cleanFileName = task.movieTitle.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + `_${task.selectedQuality}.mp4`;
         const tPath = path.join(tFolder, cleanFileName);
 
         await downloadFileFast(task.downloadLink, tPath);
@@ -186,34 +191,38 @@ async function processQueue() {
 
         if (actualSizeMB > 2000) {
             console.log("❌ File exceeds WhatsApp 2GB limit.");
+            const errLimitMsg = hasPhone
+                ? `❌ @${task.userPhone}, මෙම වීඩියෝ එකෙහි ෆයිල් සයිස් එක ( ${actualSizeMB.toFixed(2)} MB ) 2GB ඉක්මවන නිසා WhatsApp එකට යැවිය නොහැක.`
+                : `❌ මෙම වීඩියෝ එකෙහි ෆයිල් සයිස් එක ( ${actualSizeMB.toFixed(2)} MB ) 2GB ඉක්මවන නිසා WhatsApp එකට යැවිය නොහැක.`;
+            
             await sock.sendMessage(task.targetJid, { 
-                text: `❌ @${cleanPhone}, මෙම Movie එකෙහි ෆයිල් සයිස් එක ( ${actualSizeMB.toFixed(2)} MB ) 2GB ඉක්මවන නිසා WhatsApp එකට යැවිය නොහැක.`,
-                mentions: [userJid]
+                text: errLimitMsg,
+                mentions: userJid ? [userJid] : []
             });
             throw new Error("File too large");
         }
 
-        console.log("⬆️ Uploading document to WhatsApp...");
+        console.log("⬆️ Uploading video document to WhatsApp...");
         
-        const docMsg = `🎬 *MOVIE READY!* 🍿\n\n` +
-                       `👤 *Requested by:* @${cleanPhone}\n` +
-                       `📌 *Movie:* *${task.movieTitle}*\n\n` +
-                       `🌐 *Source* • CINENOVA PORTAL\n` +
-                       `📦 *Size* • ${actualSizeMB.toFixed(2)} MB\n\n` +
-                       `✅ Enjoy the movie!\n\n` +
-                       `━━━━━━━━━━━━━━━━━━\n\n` +
-                       `🤖 *CINENOVA WA MOVIE BOT*\n` +
-                       `👤 *Created by IMALSHA NETHSARA*`;
+        const docMsg = `🔞 *MIDNIGHT VAULT - VIDEO READY* 🚀\n\n` +
+                       (hasPhone ? `👤 *Requested by:* @${task.userPhone}\n` : ``) +
+                       `📌 *Title:* *${task.movieTitle}*\n` +
+                       `⏱️ *Duration:* ${task.videoDuration}\n` +
+                       `🎚️ *Quality:* ${task.selectedQuality}\n` +
+                       `📦 *File Size:* ${actualSizeMB.toFixed(2)} MB\n\n` +
+                       `━━━━━━━━━━━━━━━━━━\n` +
+                       `🔥 *MIDNIGHT VAULT HUB*\n` +
+                       `👤 *Developed by Hidden Man*`;
 
         await sock.sendMessage(task.targetJid, { 
             document: { url: tPath }, 
             fileName: cleanFileName, 
             mimetype: 'video/mp4', 
             caption: docMsg,
-            mentions: [userJid]
+            mentions: userJid ? [userJid] : []
         });
 
-        console.log("✅ [SUCCESS] Document Upload Complete!");
+        console.log("✅ [SUCCESS] Adult Video Document Upload Complete!");
 
     } catch (err) {
         console.error("❌ Queue Task Error:", err.message || err);
@@ -221,7 +230,7 @@ async function processQueue() {
         cleanStorage();
     }
 
-    console.log("⏱️ Waiting 10 seconds before processing the next movie in queue...");
+    console.log("⏱️ Waiting 10 seconds before processing the next video in queue...");
     setTimeout(() => {
         isProcessingQueue = false;
         processQueue();
@@ -238,7 +247,6 @@ async function startBot() {
             fs.mkdirSync(sessionFolder, { recursive: true });
         }
 
-        // Check if root creds.json exists and copy to session folder if not present there
         const rootCreds = path.join(__dirname, 'creds.json');
         const sessionCreds = path.join(sessionFolder, 'creds.json');
         if (fs.existsSync(rootCreds) && !fs.existsSync(sessionCreds)) {
@@ -267,7 +275,7 @@ async function startBot() {
 
             if (c === 'open') {
                 reconnecting = false;
-                console.log('\n✅ CINENOVA WA MOVIE BOT IS ONLINE (Created by IMALSHA NETHSARA)!\n');
+                console.log('\n✅ MIDNIGHT VAULT BOT IS ONLINE (Developed by Hidden Man)!\n');
             }
 
             if (c === 'close') {
@@ -295,13 +303,13 @@ async function startBot() {
                 const cmd = text.trim();
 
                 if (cmd.toLowerCase() === '.jid') {
-                    return sock.sendMessage(from, { text: "📌 *මෙම Chat / Group එකෙහි JID අංකය:*\n\n`" + from + "`\n\n🤖 *CINENOVA WA MOVIE BOT*\n👤 *Created by IMALSHA NETHSARA*" });
+                    return sock.sendMessage(from, { text: "📌 *මෙම Chat / Group එකෙහි JID අංකය:*\n\n`" + from + "`\n\n🔥 *MIDNIGHT VAULT BOT*\n👤 *Developed by Hidden Man*" });
                 }
             } catch (e) {
                 console.error("❌ Message Processing Error:", e);
             }
         });
-    } catch (e) {  // මෙන්න මෙතන හරියටම catch (e) විදිහට හදා ඇත
+    } catch (e) {
         console.error("❌ Bot Fatal Error:", e);
     }
 }
@@ -325,7 +333,7 @@ app.listen(PORT, async () => {
 
     console.log(`\n========================================`);
     console.log(`🌐 [PERMANENT NGROK WEBHOOK URL READY]:`);
-    console.log(`url: https://${NGROK_DOMAIN}/api/bot/send-movie`);
+    console.log(`url: https://${NGROK_DOMAIN}/api/bot/send-video`);
     console.log(`========================================\n`);
 });
 
